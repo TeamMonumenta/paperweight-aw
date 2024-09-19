@@ -24,15 +24,18 @@
 
 package io.papermc.paperweight.userdev
 
-import groovy.json.JsonSlurper
+import com.google.gson.Gson
+import com.google.gson.JsonObject
+import io.papermc.paperweight.userdev.ZipUtils.unpack
+import io.papermc.paperweight.userdev.ZipUtils.unpackNullable
 import java.io.IOException
 import java.io.UncheckedIOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.*
+import java.util.Arrays
 import java.util.Objects
 import java.util.function.Supplier
 import net.fabricmc.tinyremapper.FileSystemReference
-import org.apache.groovy.json.internal.LazyMap
 
 object FileSystemUtil {
     @Throws(IOException::class)
@@ -98,9 +101,28 @@ object ZipUtils {
     }
 }
 
-class AccessWidenerFile(private val path: String, private val modId: String?, internal val content: ByteArray) {
-    fun path(): String {
-        return path
+data class AccessWidenerFile(
+    val path: String,
+    val modId: String,
+    val content: ByteArray
+) {
+    override fun hashCode(): Int {
+        var result = Objects.hash(path, modId)
+        result = 31 * result + content.contentHashCode()
+        return result
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as AccessWidenerFile
+
+        if (path != other.path) return false
+        if (modId != other.modId) return false
+        if (!content.contentEquals(other.content)) return false
+
+        return true
     }
 
     companion object {
@@ -108,43 +130,46 @@ class AccessWidenerFile(private val path: String, private val modId: String?, in
          * Reads the access-widener contained in a mod jar, or returns null if there is none.
          */
         fun fromModJar(modJarPath: Path): AccessWidenerFile? {
-            val modJsonBytes: ByteArray
+            val modJsonBytes: ByteArray?
 
             try {
-                modJsonBytes = ZipUtils.unpackNullable(modJarPath, "ignite.mod.json")!!
+                modJsonBytes = unpackNullable(modJarPath, "fabric.mod.json")
             } catch (e: IOException) {
                 throw UncheckedIOException("Failed to read access-widener file from: " + modJarPath.toAbsolutePath(), e)
             }
 
-            val obj = JsonSlurper().parseText(String(modJsonBytes, StandardCharsets.UTF_8)) as? LazyMap
-                ?: throw RuntimeException()
-
-            if (!obj.containsKey("wideners") || obj["wideners"] == null || (obj["wideners"] as List<*>?)!!.isEmpty()) {
-                throw RuntimeException()
+            if (modJsonBytes == null) {
+                return null
             }
 
-            val awPath = (obj["wideners"] as List<String>?)!![0]
-            val modId = obj["id"] as String?
+            val jsonObject: JsonObject = Gson().fromJson(String(modJsonBytes, StandardCharsets.UTF_8), JsonObject::class.java)
+
+            if (!jsonObject.has("accessWidener")) {
+                return null
+            }
+
+            val awPath: String = jsonObject.get("accessWidener").asString
+            val modId: String = jsonObject.get("id").asString
 
             val content: ByteArray
+
             try {
-                content = ZipUtils.unpack(modJarPath, awPath)
+                content = unpack(modJarPath, awPath)
             } catch (e: IOException) {
                 throw UncheckedIOException(
-                    "Could not find access widener file (%s) defined in the fabric.mod.json file of %s".format(
+                    String.format(
+                        "Could not find access widener file (%s) defined in the fabric.mod.json file of %s",
                         awPath,
                         modJarPath.toAbsolutePath()
                     ), e
                 )
             }
 
-            return AccessWidenerFile(awPath, modId, content)
+            return AccessWidenerFile(
+                awPath,
+                modId,
+                content
+            )
         }
-    }
-
-    override fun hashCode(): Int {
-        var result = Objects.hash(path, modId)
-        result = 31 * result + content.contentHashCode()
-        return result
     }
 }

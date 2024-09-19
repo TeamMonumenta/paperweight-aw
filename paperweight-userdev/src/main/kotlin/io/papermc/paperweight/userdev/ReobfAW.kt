@@ -17,26 +17,22 @@ open class RemapAccessWidenerTask : DefaultTask() {
     @TaskAction
     @Throws(IOException::class)
     fun remapAccessWidenerTask() {
-        val project = project
-        val reobfTask = getProject().tasks.getByName("reobfJar") as RemapJar
+        val reobfTask = project.tasks.getByName("reobfJar") as RemapJar
         val inputJar = reobfTask.outputJar.get().asFile
         val paths = reobfTask.remapClasspath.files.stream().map(File::toPath).toArray { n -> arrayOfNulls<Path>(n); }
         val accessWidenerFile = AccessWidenerFile.fromModJar(inputJar.toPath()) ?: throw RuntimeException("Please run reobfJar Task!")
         val input: ByteArray = accessWidenerFile.content
-        val from = "mojang+yarn"
-        val to = "spigot"
-        val remapJar = checkNotNull(project.tasks.findByName("reobfJar") as RemapJar?)
-        val mappingsFile = remapJar.mappingsFile
+        val mappingsFile = reobfTask.mappingsFile
         val tinyRemapper = net.fabricmc.tinyremapper.TinyRemapper.newRemapper()
-            .withMappings(TinyUtils.createTinyMappingProvider(mappingsFile.get().asFile.toPath(), from, to)).build()
+            .withMappings(TinyUtils.createTinyMappingProvider(mappingsFile.get().asFile.toPath(), "mojang+yarn", "spigot")).build()
         tinyRemapper.readInputs(inputJar.toPath())
         tinyRemapper.readClassPath(*paths)
         val version: Int = AccessWidenerReader.readVersion(input)
         val writer = AccessWidenerWriter(version)
-        val remapper = AccessWidenerRemapper(writer, tinyRemapper.getEnvironment().getRemapper(), from, to)
+        val remapper = AccessWidenerRemapper(writer, tinyRemapper.getEnvironment().remapper, "named", "intermediary")
         val reader = AccessWidenerReader(remapper)
         reader.read(input)
         val output: ByteArray = writer.write()
-        replace(inputJar.toPath(), accessWidenerFile.path(), output)
+        replace(inputJar.toPath(), accessWidenerFile.path, output)
     }
 }

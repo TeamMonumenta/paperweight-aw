@@ -23,6 +23,7 @@
 package io.papermc.paperweight.userdev
 
 import io.papermc.paperweight.util.constants.*
+import kotlin.io.path.*
 import org.gradle.api.Action
 import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.artifacts.MinimalExternalModuleDependency
@@ -90,6 +91,7 @@ abstract class PaperweightUserDependenciesExtension(
         val dep = dependencies.create(group, artifactId, version, configuration, classifier, ext)
         configurationAction(dep)
         dependencies.add(devBundleConfigurationName, dep)
+        Path("a").invariantSeparatorsPathString
         return dep
     }
 
