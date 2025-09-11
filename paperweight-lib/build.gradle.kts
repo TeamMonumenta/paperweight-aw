@@ -26,6 +26,8 @@ dependencies {
 
     implementation(libs.bundles.hypo)
     implementation(libs.bundles.cadix)
+    implementation(libs.aw)
+    implementation(libs.tinyRemapper)
 
     implementation(libs.lorenzTiny)
 

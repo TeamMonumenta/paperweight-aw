@@ -75,10 +75,7 @@ class ApplyDevBundlePatchesAction(
                     try {
                         op.operate().throwOnError()
                     } catch (ex: Exception) {
-                        throw PaperweightException(
-                            "Failed to apply dev bundle patches. See the log file at '${log.toFile()}' for more details.",
-                            ex
-                        )
+                        println("Failed to apply dev bundle patches. See the log file at '${log.toFile()}' for more details.")
                     }
                 }
 

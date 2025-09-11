@@ -23,13 +23,18 @@
 package io.papermc.paperweight.tasks
 
 import io.papermc.paperweight.util.*
+import java.io.Reader
+import java.io.Writer
 import java.nio.file.Path
 import javax.inject.Inject
 import kotlin.io.path.*
+import net.fabricmc.accesswidener.AccessWidenerReader
+import net.fabricmc.accesswidener.AccessWidenerVisitor
 import org.cadixdev.at.AccessChange
 import org.cadixdev.at.AccessTransform
 import org.cadixdev.at.AccessTransformSet
 import org.cadixdev.at.ModifierChange
+import org.cadixdev.at.io.AccessTransformFormat
 import org.cadixdev.at.io.AccessTransformFormats
 import org.cadixdev.atlas.Atlas
 import org.cadixdev.atlas.AtlasTransformerContext
@@ -41,6 +46,7 @@ import org.cadixdev.bombe.jar.JarEntryTransformer
 import org.cadixdev.bombe.type.signature.MethodSignature
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.kotlin.dsl.*
@@ -61,7 +67,8 @@ fun applyAccessTransform(
     atFilePath: Path,
     jvmArgs: List<String> = listOf("-Xmx1G"),
     workerExecutor: WorkerExecutor,
-    launcher: JavaLauncher
+    launcher: JavaLauncher,
+    format: String = "forge"
 ): WorkQueue {
     ensureParentExists(outputJarPath)
     ensureDeleted(outputJarPath)
@@ -75,10 +82,52 @@ fun applyAccessTransform(
         inputJar.set(inputJarPath)
         atFile.set(atFilePath)
         outputJar.set(outputJarPath)
+        atFormat.set(format)
     }
 
     return queue
 }
+
+private fun awToAtAccess(aw: AccessWidenerReader.AccessType): AccessTransform {
+    return when (aw) {
+        AccessWidenerReader.AccessType.ACCESSIBLE -> AccessTransform.of(AccessChange.PUBLIC)
+        AccessWidenerReader.AccessType.MUTABLE -> AccessTransform.of(ModifierChange.REMOVE)
+        AccessWidenerReader.AccessType.EXTENDABLE -> AccessTransform.of(ModifierChange.REMOVE)
+    }
+}
+
+private class ATSetVisitor(val set: AccessTransformSet) : AccessWidenerVisitor {
+    override fun visitClass(name: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
+        val clazz = name.replace("/", ".")
+        val classSet = set.getOrCreateClass(clazz)
+        classSet.merge(awToAtAccess(access))
+    }
+
+    override fun visitMethod(owner: String, name: String, descriptor: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
+        val clazz = owner.replace("/", ".")
+        val classSet = set.getOrCreateClass(clazz)
+        classSet.mergeMethod(MethodSignature.of(name, descriptor), awToAtAccess(access))
+    }
+
+    override fun visitField(owner: String, name: String, descriptor: String, access: AccessWidenerReader.AccessType, transitive: Boolean) {
+        val clazz = owner.replace("/", ".")
+        val classSet = set.getOrCreateClass(clazz)
+        classSet.mergeField(name, awToAtAccess(access))
+    }
+}
+
+val atFormatByName = mapOf(
+    "forge" to AccessTransformFormats.FML,
+    "fabric" to object : AccessTransformFormat {
+        override fun read(reader: Reader, set: AccessTransformSet) {
+            AccessWidenerReader(ATSetVisitor(set)).read(reader.buffered())
+        }
+
+        override fun write(writer: Writer, set: AccessTransformSet) {
+            TODO("not implemented yet")
+        }
+    }
+)
 
 @CacheableTask
 abstract class ApplyAccessTransform : JavaLauncherTask() {
@@ -120,7 +169,7 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
 
     abstract class AtlasAction : WorkAction<AtlasParameters> {
         override fun execute() {
-            val at = AccessTransformFormats.FML.read(parameters.atFile.path)
+            val at = atFormatByName[parameters.atFormat.get()]!!.read(parameters.atFile.path)
 
             Atlas().apply {
                 install {
@@ -149,6 +198,7 @@ abstract class ApplyAccessTransform : JavaLauncherTask() {
         val inputJar: RegularFileProperty
         val atFile: RegularFileProperty
         val outputJar: RegularFileProperty
+        val atFormat: Property<String>
     }
 }
 

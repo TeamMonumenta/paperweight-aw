@@ -157,11 +157,13 @@ class SetupHandlerImplV2(
         )
         dispatcher.provided(at.at)
 
+        val decompInputJar = makeAWTask("accessWidenDecompInputJar", context, dispatcher, javaLauncher, at.outputJar)
+
         val decompile = dispatcher.register(
             "decompileMinecraftServer",
             DecompileMinecraftAction(
                 javaLauncher,
-                at.outputJar,
+                decompInputJar,
                 dispatcher.outputFile("output.jar"),
                 downloadMcLibs.minecraftLibraryJars,
                 stringListValue(bundle.config.decompile.args),
@@ -202,7 +204,7 @@ class SetupHandlerImplV2(
             "filterPaperShadowJar",
             FilterPaperShadowJarAction(
                 applyPatches.outputJar,
-                applyPaperclip.outputJar,
+                makeAWTask("accessWidenPaperclipOutputJar", context, dispatcher, javaLauncher, applyPaperclip.outputJar),
                 dispatcher.outputFile("output.jar"),
                 value(bundle.config.buildData.relocations) {
                     listOf(InputStreamProvider.string(gson.toJson(it)))
@@ -242,7 +244,12 @@ class SetupHandlerImplV2(
 
         val dispatcher = createDispatcher(context)
         val filter = dispatcher.registered<FilterPaperShadowJarAction>("filterPaperShadowJar").outputJar
-        val paperclip = dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar
+        val paperclip = if(context.userAw != null) {
+            dispatcher.registered<AccessWidenAction>("accessWidenPaperclipOutputJar").outputJar
+        } else {
+            dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar
+        }
+
         context.withProgressLogger { progressLogger ->
             dispatcher.dispatch(filter, paperclip) {
                 progressLogger.progress(it)

@@ -29,12 +29,14 @@ import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
 import io.papermc.paperweight.userdev.internal.action.fileValue
 import io.papermc.paperweight.userdev.internal.action.javaLauncherValue
 import io.papermc.paperweight.userdev.internal.action.stringListValue
+import io.papermc.paperweight.userdev.internal.setup.action.AccessWidenAction
 import io.papermc.paperweight.userdev.internal.setup.action.ApplyDevBundlePatchesAction
 import io.papermc.paperweight.userdev.internal.setup.action.ExtractFromBundlerAction
 import io.papermc.paperweight.userdev.internal.setup.action.RunCodebookAction
 import io.papermc.paperweight.userdev.internal.setup.action.RunPaperclipAction
 import io.papermc.paperweight.userdev.internal.setup.action.SetupMacheSourcesAction
 import io.papermc.paperweight.userdev.internal.setup.action.VanillaServerDownloads
+import io.papermc.paperweight.userdev.internal.setup.action.makeAWTask
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
@@ -122,7 +124,7 @@ class SetupHandlerImpl(
             "setupMacheSources",
             SetupMacheSourcesAction(
                 javaLauncher,
-                remap.outputJar,
+                makeAWTask("accessWidenDecompInputJar", context, dispatcher, javaLauncher, remap.outputJar),
                 dispatcher.outputFile("output.zip"),
                 extract.minecraftLibraryJars,
                 stringListValue(macheMeta().decompilerArgs),
@@ -143,7 +145,7 @@ class SetupHandlerImpl(
                 bundleZip,
                 StringValue(bundle.config.patchDir),
                 dispatcher.outputFile("output.jar"),
-                applyPaperclip.outputJar,
+                makeAWTask("accessWidenPaperclipOutputJar", context, dispatcher, javaLauncher, applyPaperclip.outputJar),
             )
         )
         dispatcher.provided(applyPatches.patchesPath)
@@ -175,6 +177,8 @@ class SetupHandlerImpl(
         val dispatcher = createDispatcher(context)
         val request = if (parameters.genSources.get()) {
             dispatcher.registered<ApplyDevBundlePatchesAction>("applyDevBundlePatches").outputJar
+        } else if(context.userAw != null) {
+            dispatcher.registered<AccessWidenAction>("accessTransformPaperclipPatchedJar").outputJar
         } else {
             dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar
         }

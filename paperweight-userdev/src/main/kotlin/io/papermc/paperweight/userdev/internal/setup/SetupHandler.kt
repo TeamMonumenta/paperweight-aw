@@ -128,6 +128,7 @@ interface SetupHandler {
         val macheParamMappingsConfig: FileCollection,
         val macheConstantsConfig: FileCollection,
         val macheCodebookConfig: FileCollection,
+        val userAw: Path?
     ) {
         fun withProgressLogger(
             name: String = "execute",

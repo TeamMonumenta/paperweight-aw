@@ -127,12 +127,8 @@ class WorkGraph(
             return
         }
 
-        val earlyUpToDateCheck = root && !retry && terminalInputHash != null
-
-        if (!earlyUpToDateCheck) {
-            for (dep in node.dependencies) {
-                executeNode(work, dep, visited, hashCache, progressEventListener)
-            }
+        for (dep in node.dependencies) {
+            executeNode(work, dep, visited, hashCache, progressEventListener)
         }
 
         progressEventListener(node.registration.name)
@@ -170,32 +166,26 @@ class WorkGraph(
                 }
             }
 
-            if (!earlyUpToDateCheck) {
-                logger.lifecycle("Executing ${node.registration.name}...")
-                val startExec = System.nanoTime()
+            logger.lifecycle("Executing ${node.registration.name}...")
+            val startExec = System.nanoTime()
 
-                try {
-                    node.registration.action.execute()
-                } catch (e: Exception) {
-                    throw PaperweightException("Exception executing ${node.registration.name}", e)
-                }
-
-                val deps = if (root && terminalInputHash != null) collectDependencies(node) else null
-                val metadata = Metadata(node.registration.outputs.hash(hashCache), deps?.takeIf { it.isNotEmpty() })
-                metadata.writeTo(metadataFile)
-
-                val tookExec = System.nanoTime() - startExec
-                logger.lifecycle("Finished ${node.registration.name} in ${formatNs(tookExec)}")
+            try {
+                node.registration.action.execute()
+            } catch (e: Exception) {
+                throw PaperweightException("Exception executing ${node.registration.name}", e)
             }
+
+            val deps = if (root && terminalInputHash != null) collectDependencies(node) else null
+            val metadata = Metadata(node.registration.outputs.hash(hashCache), deps?.takeIf { it.isNotEmpty() })
+            metadata.writeTo(metadataFile)
+
+            val tookExec = System.nanoTime() - startExec
+            logger.lifecycle("Finished ${node.registration.name} in ${formatNs(tookExec)}")
 
             return@withLock false
         }
         if (upToDate) {
             return
-        }
-
-        if (earlyUpToDateCheck) {
-            executeNode(work, node, visited, hashCache, progressEventListener, true)
         }
     }
 

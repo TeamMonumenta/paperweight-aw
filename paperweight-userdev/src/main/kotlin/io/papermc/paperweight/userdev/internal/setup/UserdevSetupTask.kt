@@ -34,6 +34,7 @@ import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.services.ServiceReference
 import org.gradle.api.tasks.CompileClasspath
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
@@ -91,6 +92,10 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
     @get:Inject
     abstract val progressLoggerFactory: ProgressLoggerFactory
 
+    @get:InputFile
+    @get:Optional
+    abstract val awPath: RegularFileProperty
+
     override fun init() {
         super.init()
         mappedServerJar.set(layout.cache.resolve(paperTaskOutput("mappedServerJar", "jar")))
@@ -114,6 +119,7 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
             macheParamMappingsConfig,
             macheConstantsConfig,
             macheCodebookConfig,
+            awPath.orNull?.path
         )
 
         val result: SetupHandler.ArtifactsResult

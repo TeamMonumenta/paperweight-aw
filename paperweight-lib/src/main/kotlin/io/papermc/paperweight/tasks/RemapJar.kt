@@ -25,8 +25,14 @@ package io.papermc.paperweight.tasks
 import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
+import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.*
+import net.fabricmc.accesswidener.AccessWidenerReader
+import net.fabricmc.accesswidener.AccessWidenerRemapper
+import net.fabricmc.accesswidener.AccessWidenerWriter
+import net.fabricmc.tinyremapper.TinyUtils
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFileProperty
@@ -34,6 +40,8 @@ import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.*
 import org.gradle.jvm.toolchain.JavaLauncher
+
+private typealias TR = net.fabricmc.tinyremapper.TinyRemapper
 
 abstract class RemapJar : JavaLauncherTask() {
 
@@ -65,12 +73,41 @@ abstract class RemapJar : JavaLauncherTask() {
     @get:Internal
     abstract val jvmArgs: ListProperty<String>
 
+    @get:Internal
+    abstract val accessWideners: ListProperty<String>
+
     override fun init() {
         super.init()
 
         outputJar.convention(defaultOutput())
         jvmArgs.convention(listOf("-Xmx1G"))
+        accessWideners.convention(listOf())
         remapperArgs.convention(TinyRemapper.createArgsList())
+    }
+
+    private fun remapAW() {
+        FileSystems.newFileSystem(outputJar.path).use { fs ->
+            val mappingsProvider = TinyUtils.createTinyMappingProvider(mappingsFile.get().asFile.toPath(), fromNamespace.get(), toNamespace.get())
+            val tinyRemapper = TR.newRemapper().withMappings(mappingsProvider).build()
+
+            try {
+                tinyRemapper.readInputs(inputJar.path)
+                tinyRemapper.readClassPath(*remapClasspath.files.map { it.toPath() }.toTypedArray())
+
+                for (path in accessWideners.get()) {
+                    val p = fs.getPath(path)
+                    val input = Files.readAllBytes(p)
+                    val version = AccessWidenerReader.readVersion(input)
+                    val writer = AccessWidenerWriter(version)
+                    val remapper = AccessWidenerRemapper(writer, tinyRemapper.getEnvironment().remapper, "named", "intermediary")
+                    val reader = AccessWidenerReader(remapper)
+                    reader.read(input)
+                    Files.write(p, writer.write())
+                }
+            } finally {
+                tinyRemapper.finish()
+            }
+        }
     }
 
     @TaskAction
@@ -98,6 +135,8 @@ abstract class RemapJar : JavaLauncherTask() {
                 workingDir = layout.cache,
                 jvmArgs = jvmArgs.get()
             )
+
+            remapAW()
         } else {
             outputJar.path.deleteForcefully()
             outputJar.path.parent.createDirectories()

@@ -4,11 +4,13 @@ lorenz = "0.5.8"
 hypo = "1.2.4"
 serialize = "1.8.1"
 jst = "1.0.68+paper.2-SNAPSHOT"
+aw = "2.1.0"
 tinyRemapper = "0.11.1"
 
 [libraries]
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
 asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "asm" }
+aw = { module = "net.fabricmc:access-widener", version.ref = "aw" }
 
 httpclient = "org.apache.httpcomponents:httpclient:4.5.14"
 kotson = "com.github.salomonbrys.kotson:kotson:2.5.0"

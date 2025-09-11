@@ -73,6 +73,8 @@ abstract class PaperweightUserExtension(
     val reobfArtifactConfiguration: Property<ReobfArtifactConfiguration> = objects.property<ReobfArtifactConfiguration>()
         .convention(ReobfArtifactConfiguration.MOJANG_PRODUCTION)
 
+    val awPath = objects.fileProperty()
+
     /**
      * Provides the Minecraft version of the current dev bundle.
      */

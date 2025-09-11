@@ -11,6 +11,8 @@ dependencies {
     }
     implementation(libs.coroutines)
     implementation(libs.bundles.asm)
+    implementation(libs.aw)
+    implementation(libs.tinyRemapper)
 }
 
 gradlePlugin {

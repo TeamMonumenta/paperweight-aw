@@ -157,7 +157,7 @@ class SetupHandlerImplV5(
             "decompileMinecraftServer",
             DecompileMinecraftAction(
                 javaLauncher,
-                at.outputJar,
+                makeAWTask("accessWidenDecompInputJar", context, dispatcher, javaLauncher, at.outputJar),
                 dispatcher.outputFile("output.jar"),
                 extract.minecraftLibraryJars,
                 stringListValue(bundle.config.decompile.args),
@@ -176,7 +176,7 @@ class SetupHandlerImplV5(
                 bundleZip,
                 StringValue(bundle.config.patchDir),
                 dispatcher.outputFile("output.jar"),
-                applyPaperclip.outputJar,
+                makeAWTask("accessWidenPaperclipOutputJar", context, dispatcher, javaLauncher, applyPaperclip.outputJar),
             )
         )
         dispatcher.provided(applyPatches.patchesPath)
@@ -226,11 +226,15 @@ class SetupHandlerImplV5(
         }
 
         val dispatcher = createDispatcher(context)
+
         val request = if (parameters.genSources.get()) {
             dispatcher.registered<ApplyDevBundlePatchesAction>("applyDevBundlePatches").outputJar
+        } else if (context.userAw != null)  {
+            dispatcher.registered<AccessWidenAction>("accessWidenPaperclipOutputJar").outputJar
         } else {
             dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar
         }
+
         context.withProgressLogger { progressLogger ->
             dispatcher.dispatch(request) {
                 progressLogger.progress(it)
