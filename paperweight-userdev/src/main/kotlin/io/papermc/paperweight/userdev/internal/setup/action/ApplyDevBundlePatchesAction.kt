@@ -25,7 +25,6 @@ package io.papermc.paperweight.userdev.internal.setup.action
 import codechicken.diffpatch.cli.PatchOperation
 import codechicken.diffpatch.util.LogLevel
 import codechicken.diffpatch.util.archiver.ArchiveFormat
-import io.papermc.paperweight.PaperweightException
 import io.papermc.paperweight.userdev.internal.action.FileValue
 import io.papermc.paperweight.userdev.internal.action.Input
 import io.papermc.paperweight.userdev.internal.action.Output

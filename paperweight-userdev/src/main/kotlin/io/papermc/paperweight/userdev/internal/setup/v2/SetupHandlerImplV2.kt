@@ -244,7 +244,7 @@ class SetupHandlerImplV2(
 
         val dispatcher = createDispatcher(context)
         val filter = dispatcher.registered<FilterPaperShadowJarAction>("filterPaperShadowJar").outputJar
-        val paperclip = if(context.userAw != null) {
+        val paperclip = if (context.userAw != null) {
             dispatcher.registered<AccessWidenAction>("accessWidenPaperclipOutputJar").outputJar
         } else {
             dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar

@@ -229,7 +229,7 @@ class SetupHandlerImplV5(
 
         val request = if (parameters.genSources.get()) {
             dispatcher.registered<ApplyDevBundlePatchesAction>("applyDevBundlePatches").outputJar
-        } else if (context.userAw != null)  {
+        } else if (context.userAw != null) {
             dispatcher.registered<AccessWidenAction>("accessWidenPaperclipOutputJar").outputJar
         } else {
             dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar

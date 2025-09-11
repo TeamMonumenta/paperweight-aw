@@ -1,12 +1,29 @@
+/*
+ * paperweight is a Gradle plugin for the PaperMC project.
+ *
+ * Copyright (c) 2023 Kyle Wood (DenWav)
+ *                    Contributors
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation;
+ * version 2.1 only, no later versions.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+ * USA
+ */
+
 package io.papermc.paperweight.userdev.internal.setup.action
 
-import io.papermc.paperweight.tasks.*
-import io.papermc.paperweight.userdev.internal.action.FileValue
-import io.papermc.paperweight.userdev.internal.action.Input
-import io.papermc.paperweight.userdev.internal.action.Output
-import io.papermc.paperweight.userdev.internal.action.Value
-import io.papermc.paperweight.userdev.internal.action.WorkDispatcher
-import io.papermc.paperweight.userdev.internal.action.fileValue
+import io.papermc.paperweight.tasks.applyAccessTransform
+import io.papermc.paperweight.userdev.internal.action.*
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.workers.WorkerExecutor
@@ -30,20 +47,25 @@ class AccessWidenAction(
     }
 }
 
-fun makeAWTask(name: String, context: SetupHandler.ExecutionContext, dispatcher: WorkDispatcher, javaLauncher: Value<JavaLauncher>, inJar: FileValue) =
-    context.userAw?.let {
-        val aw = dispatcher.register(
-            name,
-            AccessWidenAction(
-                javaLauncher,
-                context.workerExecutor,
-                fileValue(it),
-                inJar,
-                dispatcher.outputFile("output.jar"),
-            )
+fun makeAWTask(
+    name: String,
+    context: SetupHandler.ExecutionContext,
+    dispatcher: WorkDispatcher,
+    javaLauncher: Value<JavaLauncher>,
+    inJar: FileValue
+) = context.userAw?.let {
+    val aw = dispatcher.register(
+        name,
+        AccessWidenAction(
+            javaLauncher,
+            context.workerExecutor,
+            fileValue(it),
+            inJar,
+            dispatcher.outputFile("output.jar"),
         )
+    )
 
-        dispatcher.provided(aw.aw)
+    dispatcher.provided(aw.aw)
 
-        aw.outputJar
-    } ?: inJar
+    aw.outputJar
+} ?: inJar
