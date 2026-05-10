@@ -30,6 +30,7 @@ import javax.inject.Inject
 import kotlin.io.path.*
 import kotlin.system.measureNanoTime
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.RegularFile
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.services.ServiceReference
@@ -98,7 +99,16 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
 
     override fun init() {
         super.init()
-        mappedServerJar.set(layout.cache.resolve(paperTaskOutput("mappedServerJar", "jar")))
+
+        val out = awPath.flatMap {
+            val name = "mappedServerJar" + (awPath.orNull?.asFile?.toPath()?.sha256asHex()?.let {
+                "-$it"
+            } ?: "")
+
+            project.paperTaskOutputRegularFile(name, "jar")
+        }
+
+        mappedServerJar.set(out)
         reobfMappings.set(layout.cache.resolve(paperTaskOutput("reobfMappings", "tiny")))
     }
 

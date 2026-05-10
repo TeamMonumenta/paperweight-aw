@@ -22,6 +22,9 @@
 
 package io.papermc.paperweight.util.constants
 
+import io.papermc.paperweight.util.cache
+import io.papermc.paperweight.util.cacheDir
+import org.gradle.api.Project
 import org.gradle.api.Task
 
 const val PAPERWEIGHT_EXTENSION = "paperweight"
@@ -122,6 +125,8 @@ const val PATCH_ROULETTE_CONFIG_DIR = "$PAPER_PATH/patch-roulette"
 
 fun Task.paperTaskOutput(ext: String? = null) = paperTaskOutput(name, ext)
 fun paperTaskOutput(name: String, ext: String? = null) = "$TASK_CACHE/$name" + (ext?.let { ".$it" } ?: "")
+fun Project.paperTaskOutputRegularFile(name: String, ext: String? = null) =
+    project.layout.buildDirectory.file("$CACHE_PATH/${paperTaskOutput(name, ext)}")
 
 const val GENERAL_TASK_GROUP = "paperweight"
 const val INTERNAL_TASK_GROUP = "paperweight internal"
