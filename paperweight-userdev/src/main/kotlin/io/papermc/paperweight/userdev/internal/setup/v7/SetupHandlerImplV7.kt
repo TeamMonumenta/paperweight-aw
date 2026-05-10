@@ -32,12 +32,14 @@ import io.papermc.paperweight.userdev.internal.setup.BundleInfo
 import io.papermc.paperweight.userdev.internal.setup.SetupHandler
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetup
 import io.papermc.paperweight.userdev.internal.setup.UserdevSetupTask
+import io.papermc.paperweight.userdev.internal.setup.action.AccessWidenAction
 import io.papermc.paperweight.userdev.internal.setup.action.ApplyDevBundlePatchesAction
 import io.papermc.paperweight.userdev.internal.setup.action.ExtractFromBundlerAction
 import io.papermc.paperweight.userdev.internal.setup.action.RunPaperclipAction
 import io.papermc.paperweight.userdev.internal.setup.action.RunRemappingCodebookAction
 import io.papermc.paperweight.userdev.internal.setup.action.SetupMacheSourcesAction
 import io.papermc.paperweight.userdev.internal.setup.action.VanillaServerDownloads
+import io.papermc.paperweight.userdev.internal.setup.action.makeAWTask
 import io.papermc.paperweight.util.*
 import io.papermc.paperweight.util.constants.*
 import io.papermc.paperweight.util.data.mache.*
@@ -55,7 +57,7 @@ class SetupHandlerImplV7(
 
     private fun createDispatcher(context: SetupHandler.ExecutionContext): WorkDispatcher {
         val dispatcher = WorkDispatcher.create(parameters.cache.path)
-        dispatcher.overrideTerminalInputHash(parameters.bundleZipHash.get())
+        dispatcher.overrideTerminalInputHash(parameters.bundleZipHash.get() + (context.userAw?.sha256asHex()?.let { "-aw_$it" } ?: ""))
 
         val javaLauncher = javaLauncherValue(context.javaLauncher)
         val mcVer = StringValue(bundle.config.minecraftVersion)
@@ -125,7 +127,7 @@ class SetupHandlerImplV7(
             "setupMacheSources",
             SetupMacheSourcesAction(
                 javaLauncher,
-                remap.outputJar,
+                makeAWTask("accessWidenDecompInputJar", context, dispatcher, javaLauncher, remap.outputJar),
                 dispatcher.outputFile("output.zip"),
                 extract.minecraftLibraryJars,
                 stringListValue(macheMeta().decompilerArgs),
@@ -146,7 +148,7 @@ class SetupHandlerImplV7(
                 bundleZip,
                 StringValue(bundle.config.patchDir),
                 dispatcher.outputFile("output.jar"),
-                applyPaperclip.outputJar,
+                makeAWTask("accessWidenPaperclipOutputJar", context, dispatcher, javaLauncher, applyPaperclip.outputJar),
             )
         )
         dispatcher.provided(applyPatches.patchesPath)
@@ -178,9 +180,12 @@ class SetupHandlerImplV7(
         val dispatcher = createDispatcher(context)
         val request = if (parameters.genSources.get()) {
             dispatcher.registered<ApplyDevBundlePatchesAction>("applyDevBundlePatches").outputJar
+        } else if (context.userAw != null) {
+            dispatcher.registered<AccessWidenAction>("accessWidenPaperclipOutputJar").outputJar
         } else {
             dispatcher.registered<RunPaperclipAction>("applyPaperclipPatch").outputJar
         }
+
         context.withProgressLogger { progressLogger ->
             dispatcher.dispatch(request) {
                 progressLogger.progress(it)

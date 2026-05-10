@@ -47,7 +47,7 @@ class SetupHandlerImplV2(
 ) : SetupHandler {
     private fun createDispatcher(context: SetupHandler.ExecutionContext): WorkDispatcher {
         val dispatcher = WorkDispatcher.create(parameters.cache.path)
-        dispatcher.overrideTerminalInputHash(parameters.bundleZipHash.get())
+        dispatcher.overrideTerminalInputHash(parameters.bundleZipHash.get() + (context.userAw?.sha256asHex()?.let { "-aw_$it" } ?: ""))
 
         val javaLauncher = javaLauncherValue(context.javaLauncher)
         val mcVer = StringValue(bundle.config.minecraftVersion)
