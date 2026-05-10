@@ -51,13 +51,10 @@ class CoreTasks(
 
     val macheRemapJar by tasks.registering(RunCodebook::class) {
         serverJar.set(extractFromBundler.flatMap { it.serverJar })
-        serverMappings.set(downloadMappings.flatMap { it.outputFile })
 
-        remapperArgs.set(mache.map { it.remapperArgs })
+        codebookArgs.set(mache.map { it.remapperArgs })
         codebookClasspath.from(project.configurations.named(MACHE_CODEBOOK_CONFIG))
         minecraftClasspath.from(project.configurations.named(MACHE_MINECRAFT_LIBRARIES_CONFIG))
-        remapperClasspath.from(project.configurations.named(MACHE_REMAPPER_CONFIG))
-        paramMappings.from(project.configurations.named(MACHE_PARAM_MAPPINGS_CONFIG))
         constants.from(project.configurations.named(MACHE_CONSTANTS_CONFIG))
 
         outputJar.set(layout.cache.resolve(FINAL_REMAPPED_CODEBOOK_JAR))
@@ -74,11 +71,11 @@ class CoreTasks(
     }
 
     val collectPaperATsFromPatches by tasks.registering(CollectATsFromPatches::class) {
-        patchDir.set(project.coreExt.paper.featurePatchDir.fileExists(project))
+        patchDir.set(project.coreExt.paper.featurePatchDir.fileExists())
     }
 
     val mergePaperATs by tasks.registering<MergeAccessTransforms> {
-        firstFile.set(project.coreExt.paper.additionalAts.fileExists(project))
+        firstFile.set(project.coreExt.paper.additionalAts.fileExists())
         secondFile.set(collectPaperATsFromPatches.flatMap { it.outputFile })
     }
 
@@ -91,7 +88,7 @@ class CoreTasks(
 
     val importLibraryFiles = tasks.register<ImportLibraryFiles>("importPaperLibraryFiles") {
         patches.from(project.coreExt.paper.sourcePatchDir, project.coreExt.paper.featurePatchDir)
-        devImports.set(project.coreExt.paper.devImports.fileExists(project))
+        devImports.set(project.coreExt.paper.devImports.fileExists())
         libraryFileIndex.set(indexLibraryFiles.flatMap { it.outputFile })
         libraries.from(indexLibraryFiles.map { it.libraries })
     }
