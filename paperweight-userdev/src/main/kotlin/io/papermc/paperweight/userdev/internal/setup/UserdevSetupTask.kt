@@ -101,12 +101,8 @@ abstract class UserdevSetupTask : JavaLauncherTask() {
         super.init()
 
         val out = awPath.flatMap {
-            val name = "mappedServerJar" + (awPath.orNull?.asFile?.toPath()?.sha256asHex()?.let {
-                "-$it"
-            } ?: "")
-
-            project.paperTaskOutputRegularFile(name, "jar")
-        }
+            project.paperTaskOutputRegularFile("mappedServerJar-aw_${it.asFile.toPath().sha256asHex()}", "jar")
+        }.orElse(project.paperTaskOutputRegularFile("mappedServerJar", "jar"))
 
         mappedServerJar.set(out)
         reobfMappings.set(layout.cache.resolve(paperTaskOutput("reobfMappings", "tiny")))
