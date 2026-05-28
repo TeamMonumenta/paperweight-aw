@@ -5,7 +5,7 @@ hypo = "1.2.4"
 serialize = "1.9.0"
 jst = "1.0.68+paper.2-SNAPSHOT"
 aw = "2.1.0"
-tinyRemapper = "0.12.0"
+tinyRemapper = "0.14.0"
 # For paper-checkstyle plugin
 checkstyle = "12.1.2"
 
